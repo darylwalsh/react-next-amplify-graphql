@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/darylwalsh/react-next-amplify-graphql/compare/v0.1.3...v0.1.4) (2019-11-20)
+
+
+### Features
+
+* **basic_functionality:** created basic functionality/ui ([fcae8d6](https://github.com/darylwalsh/react-next-amplify-graphql/commit/fcae8d69d211f62d91bf8549b834f4c8052c063d))
+
 ### [0.1.3](https://github.com/darylwalsh/react-next-amplify-graphql/compare/v0.1.2...v0.1.3) (2019-11-20)
 
 ### 0.1.2 (2019-11-20)
