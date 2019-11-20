@@ -1,0 +1,14 @@
+{
+    "dev": {
+        "awscloudformation": {
+            "AuthRoleName": "amplify-reactnxtampgql-dev-55353-authRole",
+            "UnauthRoleArn": "arn:aws:iam::956513181119:role/amplify-reactnxtampgql-dev-55353-unauthRole",
+            "AuthRoleArn": "arn:aws:iam::956513181119:role/amplify-reactnxtampgql-dev-55353-authRole",
+            "Region": "us-east-2",
+            "DeploymentBucketName": "amplify-reactnxtampgql-dev-55353-deployment",
+            "UnauthRoleName": "amplify-reactnxtampgql-dev-55353-unauthRole",
+            "StackName": "amplify-reactnxtampgql-dev-55353",
+            "StackId": "arn:aws:cloudformation:us-east-2:956513181119:stack/amplify-reactnxtampgql-dev-55353/0b71fdf0-0b84-11ea-a89b-06d398e7edd6"
+        }
+    }
+}

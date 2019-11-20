@@ -1,6 +1,41 @@
 import * as React from 'react'
 import nanoid from 'nanoid'
+import { API, graphqlOperation } from 'aws-amplify'
 import produce from 'immer'
+import Link from 'next/link'
+
+import config from '../src/aws-exports'
+import {
+  createTodo,
+  updateTodo,
+  deleteTodo,
+  createTodoList,
+} from '../src/graphql/mutations'
+import { getTodoList } from '../src/graphql/queries'
+import {
+  GetTodoListQuery,
+  OnCreateTodoSubscription,
+  OnUpdateTodoSubscription,
+  OnDeleteTodoSubscription,
+} from '../src/API'
+import {
+  onCreateTodo,
+  onUpdateTodo,
+  onDeleteTodo,
+} from '../src/graphql/subscriptions'
+
+type Observable<Value = unknown, Error = {}> = {
+  subscribe: (
+    cb?: (v: Value) => void,
+    errorCb?: (e: Error) => void,
+    completeCallback?: () => void,
+  ) => { unsubscribe: Function }
+}
+type Listener<T> = Observable<{ value: { data: T } }>
+
+const MY_ID = nanoid()
+
+API.configure(config)
 
 type Todo = {
   id: string
@@ -43,37 +78,106 @@ const reducer: React.Reducer<State, Action> = (state, action) => {
         draft.todos.splice(todoIndex, 1)
       })
     }
-
     default: {
-      throw new Error(`Unsupported action ${JSON.stringify(action)}`)
+      throw new Error(`Unsupported action : ${JSON.stringify(action)}`)
     }
   }
 }
 
-const App = () => {
-  // The reducer defined before
+type Props = {
+  todos: GetTodoListQuery['getTodoList']['todos']['items']
+}
+
+const sendToServer = todo => {
+  API.graphql(graphqlOperation(updateTodo, { input: todo }))
+}
+
+const App = ({ todos }: Props) => {
   const [state, dispatch] = React.useReducer(reducer, {
     currentTodo: '',
-    todos: [],
+    todos,
   })
-  const add = () => {
+  React.useEffect(() => {
+    //@ts-ignore
+    const onCreateListener: Listener<OnCreateTodoSubscription> = API.graphql(
+      graphqlOperation(onCreateTodo),
+    )
+    //@ts-ignore
+    const onUpdateListener: Listener<OnUpdateTodoSubscription> = API.graphql(
+      graphqlOperation(onUpdateTodo),
+    )
+    //@ts-ignore
+    const onDeleteListener: Listener<OnDeleteTodoSubscription> = API.graphql(
+      graphqlOperation(onDeleteTodo),
+    )
+
+    const onCreateSubscription = onCreateListener.subscribe(v => {
+      if (v.value.data.onCreateTodo['userId'] === MY_ID) return
+      dispatch({
+        type: 'add',
+        payload: v.value.data.onCreateTodo,
+      })
+    })
+    const onUpdateSubscription = onUpdateListener.subscribe(v => {
+      const todo = v.value.data.onUpdateTodo
+      dispatch({
+        type: 'update',
+        payload: {
+          id: todo.id,
+          name: todo.name,
+          completed: todo.completed,
+          createdAt: todo.createdAt,
+        },
+      })
+    })
+    const onDeleteSubscription = onDeleteListener.subscribe(v => {
+      dispatch({
+        type: 'delete',
+        payload: v.value.data.onDeleteTodo,
+      })
+    })
+
+    return () => {
+      onCreateSubscription.unsubscribe()
+      onUpdateSubscription.unsubscribe()
+      onDeleteSubscription.unsubscribe()
+    }
+  }, [])
+  const add = async () => {
+    const todo = {
+      id: nanoid(),
+      name: state.currentTodo,
+      completed: false,
+      createdAt: `${Date.now()}`,
+    }
     dispatch({
       type: 'add',
-      payload: {
-        id: nanoid(),
-        name: state.currentTodo,
-        completed: false,
-        createdAt: `${Date.now()}`,
-      },
+      payload: todo,
     })
+    // Optimistic update
     dispatch({ type: 'set-current', payload: '' })
+    try {
+      await API.graphql(
+        graphqlOperation(createTodo, {
+          input: { ...todo, todoTodoListId: 'global', userId: MY_ID },
+        }),
+      )
+    } catch (err) {
+      // With revert on error
+      dispatch({ type: 'set-current', payload: todo.name })
+    }
   }
-  const edit = (todo: Todo) => {
+  const edit = async (todo: Todo) => {
     dispatch({ type: 'update', payload: todo })
   }
-  const del = (todo: Todo) => {
+  const del = async (todo: Todo) => {
     dispatch({ type: 'delete', payload: todo })
+    await API.graphql({
+      ...graphqlOperation(deleteTodo),
+      variables: { input: { id: todo.id } },
+    })
   }
+
   return (
     <>
       <header>
@@ -108,11 +212,21 @@ const App = () => {
                 />
                 <button
                   onClick={() => {
+                    sendToServer(todo)
+                  }}
+                >
+                  Update
+                </button>
+                <button
+                  onClick={() => {
                     del(todo)
                   }}
                 >
                   Delete
                 </button>
+                <Link href={`/todo/[id]`} as={`/todo/${todo.id}`}>
+                  <a>Visit</a>
+                </Link>
               </li>
             )
           })}
@@ -120,6 +234,39 @@ const App = () => {
       </main>
     </>
   )
+}
+
+App.getInitialProps = async () => {
+  let result: { data: GetTodoListQuery; errors: {}[] }
+  try {
+    //@ts-ignore
+    result = await API.graphql(graphqlOperation(getTodoList, { id: 'global' }))
+  } catch (err) {
+    console.warn(err)
+    return { todos: [] }
+  }
+
+  if (result.errors) {
+    console.log('Failed to fetch todolist. ', result.errors)
+    return { todos: [] }
+  }
+  if (result.data.getTodoList !== null) {
+    return { todos: result.data.getTodoList.todos.items }
+  }
+
+  try {
+    await API.graphql(
+      graphqlOperation(createTodoList, {
+        input: {
+          id: 'global',
+          createdAt: `${Date.now()}`,
+        },
+      }),
+    )
+  } catch (err) {
+    console.warn(err)
+  }
+  return { todos: [] }
 }
 
 export default App
