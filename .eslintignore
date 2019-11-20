@@ -1,0 +1,7 @@
+coverage/
+build/
+/node_modules/*
+.docz/
+/.vscode
+/.git
+k8s/reactolatry-secrets.yaml
