@@ -1,6 +1,6 @@
 {
   "name": "react-next-amplify-graphql",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "react next amplify graphql",
   "main": "index.js",
   "scripts": {
