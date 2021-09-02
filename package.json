@@ -37,7 +37,7 @@
   "homepage": "https://github.com/darylwalsh/react-next-amplify-graphql#readme",
   "dependencies": {
     "aws-amplify": "^1.2.4",
-    "immer": "^5.0.0",
+    "immer": "^9.0.6",
     "nanoid": "^2.1.7",
     "next": "^9.1.4",
     "react": "^16.12.0",
